@@ -1,7 +1,7 @@
 import datetime
 import csv
 from pathlib import Path
-from typing import Dict, Union
+from typing import Dict
 
 import matplotlib.pyplot as plt
 
@@ -31,14 +31,31 @@ def _bar_colour(r: float) -> str:
 
 
 def _plot_macros(ax, pct: Dict[str, float], totals: Dict[str, float]) -> None:
-    for lbl, tgt, col, left in [
+    for lbl, tgt, col, guide_left in [
         ("Protein", 35, _pale["protein"], 0),
         ("Fat", 30, _pale["fat"], 35),
         ("Carbs", 35, _pale["carb"], 65),
     ]:
-        ax.barh(0, tgt, left=left, height=0.45, color=col, alpha=0.18, edgecolor=col, lw=0.6)
-        ax.text(left + tgt / 2, -0.25, f"Target {tgt}%", ha="center", va="center", fontsize=6, color="white")
-    left = 0
+        ax.barh(
+            0,
+            tgt,
+            left=guide_left,
+            height=0.45,
+            color=col,
+            alpha=0.18,
+            edgecolor=col,
+            lw=0.6,
+        )
+        ax.text(
+            guide_left + tgt / 2,
+            -0.25,
+            f"Target {tgt}%",
+            ha="center",
+            va="center",
+            fontsize=6,
+            color="white",
+        )
+    left = 0.0
     for key, lbl, col in [
         ("protein", "Protein", _pale["protein"]),
         ("fat", "Fat", _pale["fat"]),
@@ -47,9 +64,7 @@ def _plot_macros(ax, pct: Dict[str, float], totals: Dict[str, float]) -> None:
         pc = pct[key]
         val = totals[key]
         ax.barh(0, pc, left=left, height=0.30, color=col)
-        extra = (
-            f" ({totals['carb']-totals['fiber']:.0f} net)" if key == "carb" else ""
-        )
+        extra = f" ({totals['carb']-totals['fiber']:.0f} net)" if key == "carb" else ""
         ax.text(
             left + pc / 2,
             0,
@@ -61,28 +76,44 @@ def _plot_macros(ax, pct: Dict[str, float], totals: Dict[str, float]) -> None:
             weight="bold",
         )
         left += pc
-    ax.axis('off')
+    ax.axis("off")
     ax.set_xlim(0, 100)
     ax.set_ylim(-1.35, 1)
 
 
 def _plot_calories(ax, kcal: float) -> None:
     cal_y, cal_h, scale = 0.55, 0.15, 2400
-    ax.barh(cal_y, 100, height=cal_h, color="#888", alpha=0.20, edgecolor="#AAA", lw=0.6)
+    ax.barh(
+        cal_y, 100, height=cal_h, color="#888", alpha=0.20, edgecolor="#AAA", lw=0.6
+    )
     for s, e, c in [
         (1600, 1800, _pale["orange"]),
         (1800, 2200, _pale["green"]),
         (2200, 2400, _pale["red"]),
     ]:
-        ax.barh(cal_y, (e - s) / scale * 100, left=s / scale * 100, height=cal_h, color=c, alpha=0.15)
-    ax.barh(cal_y, min(kcal / scale, 1) * 100, height=cal_h, left=0, color=_pale["calorie"], alpha=0.70)
+        ax.barh(
+            cal_y,
+            (e - s) / scale * 100,
+            left=s / scale * 100,
+            height=cal_h,
+            color=c,
+            alpha=0.15,
+        )
+    ax.barh(
+        cal_y,
+        min(kcal / scale, 1) * 100,
+        height=cal_h,
+        left=0,
+        color=_pale["calorie"],
+        alpha=0.70,
+    )
     for v in [1600, 1800, 2000, 2200, 2400]:
         ax.vlines(
             v / scale * 100,
             cal_y - cal_h / 2,
             cal_y + cal_h / 2,
             colors="#FFC107" if v == 2000 else "white",
-            linestyles='-' if v == 2000 else (0, (4, 2)),
+            linestyles="-" if v == 2000 else (0, (4, 2)),
             lw=1,
         )
         if v == 2000:
@@ -110,25 +141,70 @@ def _plot_calories(ax, kcal: float) -> None:
 
 def _plot_micros(ax, totals: Dict[str, float]) -> None:
     row_y, bar_h, slot = -0.75, 0.24, 23
-    for i, (lbl, tgt, val, unit, scale_n) in enumerate([
-        ("Sodium", 2300, totals["sodium"], "mg", 4000),
-        ("Fiber", 28, totals["fiber"], "g", 50),
-        ("Sugar", 50, totals["add_sugar"], "g", 75),
-        ("Potassium", 3400, totals["potassium"], "mg", 5000),
-    ]):
+    for i, (lbl, tgt, val, unit, scale_n) in enumerate(
+        [
+            ("Sodium", 2300, totals["sodium"], "mg", 4000),
+            ("Fiber", 28, totals["fiber"], "g", 50),
+            ("Sugar", 50, totals["add_sugar"], "g", 75),
+            ("Potassium", 3400, totals["potassium"], "mg", 5000),
+        ]
+    ):
         x = i * slot + (i + 1) * 2
-        ax.barh(row_y, slot, left=x, height=bar_h, color="white", alpha=0.10, edgecolor="#AAA", lw=0.6)
+        ax.barh(
+            row_y,
+            slot,
+            left=x,
+            height=bar_h,
+            color="white",
+            alpha=0.10,
+            edgecolor="#AAA",
+            lw=0.6,
+        )
         ratio = val / tgt
-        ax.barh(row_y, min(ratio, 1) * slot, left=x, height=bar_h, color=_bar_colour(ratio), alpha=0.90)
-        ax.vlines(x + tgt / scale_n * slot, row_y - bar_h / 2, row_y + bar_h / 2, colors="white", linestyles=(0, (4, 2)), lw=1)
-        ax.text(x + slot / 2, row_y + bar_h / 2 + 0.06, lbl, ha='center', va='bottom', fontsize=7, color='white', weight='bold')
-        ax.text(x + slot / 2, row_y - bar_h / 2 - 0.03, f"{val:.0f}/{tgt}{unit}", ha='center', va='top', fontsize=7, color='white')
+        ax.barh(
+            row_y,
+            min(ratio, 1) * slot,
+            left=x,
+            height=bar_h,
+            color=_bar_colour(ratio),
+            alpha=0.90,
+        )
+        ax.vlines(
+            x + tgt / scale_n * slot,
+            row_y - bar_h / 2,
+            row_y + bar_h / 2,
+            colors="white",
+            linestyles=(0, (4, 2)),
+            lw=1,
+        )
+        ax.text(
+            x + slot / 2,
+            row_y + bar_h / 2 + 0.06,
+            lbl,
+            ha="center",
+            va="bottom",
+            fontsize=7,
+            color="white",
+            weight="bold",
+        )
+        ax.text(
+            x + slot / 2,
+            row_y - bar_h / 2 - 0.03,
+            f"{val:.0f}/{tgt}{unit}",
+            ha="center",
+            va="top",
+            fontsize=7,
+            color="white",
+        )
 
 
 def build_dashboard_figure(meal: Meal):
     totals = meal.totals
     kcal = meal.calories or 1e-6
-    pct = {k: (totals[k]*4 if k != 'fat' else totals[k]*9) / kcal * 100 for k in ('protein', 'fat', 'carb')}
+    pct = {
+        k: (totals[k] * 4 if k != "fat" else totals[k] * 9) / kcal * 100
+        for k in ("protein", "fat", "carb")
+    }
 
     fig, ax = plt.subplots(figsize=(7, 3))
     ax.patch.set_alpha(0)
@@ -139,7 +215,7 @@ def build_dashboard_figure(meal: Meal):
     return fig, totals, kcal
 
 
-def save_dashboard(meal: Meal, directory: Union[str, Path] = None):
+def save_dashboard(meal: Meal, directory: str | Path | None = None) -> dict[str, Path]:
     if directory is None:
         directory = Path(__file__).resolve().parent
     directory = Path(directory)

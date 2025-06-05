@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Dict, List, Tuple
 
+
 @dataclass
 class Food:
     name: str
@@ -24,6 +25,7 @@ class Food:
             sodium=float(data.get("sodium", 0)),
             potassium=float(data.get("potassium", 0)),
         )
+
 
 class Meal:
     def __init__(self, name: str = "Meal") -> None:
