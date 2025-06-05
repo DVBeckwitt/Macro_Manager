@@ -2,7 +2,9 @@ from pathlib import Path
 import yaml
 from .models import Food
 
-DATA_DIR = Path("data")
+# Base directory of the project
+BASE_DIR = Path(__file__).resolve().parents[1]
+DATA_DIR = BASE_DIR / "data"
 FOODS_YAML = DATA_DIR / "foods.yaml"
 
 
