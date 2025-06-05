@@ -8,8 +8,10 @@ A Streamlit application to visualize and log your daily macronutrient intake.
 - Exportable PNG and CSV log of daily intake
 
 ## Installation
+This project requires **Python 3.10 or newer**. Install the latest
+dependencies in editable mode with:
 ```bash
-pip install -r requirements.txt
+pip install -e .
 ```
 
 ## Usage
