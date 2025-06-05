@@ -14,7 +14,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "macro-manager=macro_manager.app:main",
+            "macro-manager=macro_manager.__main__:main",
         ]
     },
     include_package_data=True,

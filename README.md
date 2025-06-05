@@ -17,9 +17,14 @@ pip install -e .
 Newer Python versions may fail to install due to upstream dependencies.
 
 ## Usage
+After installing in editable mode, launch the dashboard with the convenience
+command:
+
 ```bash
-python -m macro_manager
+macro-manager
 ```
+
+The same behaviour is available via `python -m macro_manager` if you prefer.
 
 ## License
 This project is licensed under the MIT License. See `LICENSE` for details.
