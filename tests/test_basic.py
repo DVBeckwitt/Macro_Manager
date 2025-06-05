@@ -1,8 +1,3 @@
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
 from macro_manager.models import Food, Meal
 from macro_manager.db import load_foods
 from pytest import approx
@@ -25,4 +20,4 @@ def test_meal_totals():
     assert totals["protein"] == 12
     assert totals["fat"] == 10
     assert totals["carb"] == 1.2
-    assert meal.calories == approx(12*4 + 10*9 + 1.2*4, rel=1e-3)
+    assert meal.calories == approx(12 * 4 + 10 * 9 + 1.2 * 4, rel=1e-3)

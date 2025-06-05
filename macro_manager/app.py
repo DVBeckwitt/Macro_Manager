@@ -1,6 +1,5 @@
 import streamlit as st
-import yaml
-from pathlib import Path
+
 
 from macro_manager.models import Food, Meal
 from macro_manager.db import load_foods, save_foods
@@ -11,14 +10,19 @@ from macro_manager.plot import build_dashboard_figure, save_dashboard
 
 # ────────────────────────── Sidebar CRUD UI ───────────────────
 
+
 def manage_foods_ui(foods: dict[str, Food]) -> dict[str, Food]:
     """Render UI to add/edit/delete foods. Return potentially mutated dict."""
     st.sidebar.header("🛠️ Manage Foods")
-    action = st.sidebar.radio("Select action", ["Add", "Edit", "Delete", "None"], index=3)
+    action = st.sidebar.radio(
+        "Select action", ["Add", "Edit", "Delete", "None"], index=3
+    )
 
     def food_form(defaults: dict | None = None):
         defaults = defaults or {}
-        name = st.text_input("Food name", value=defaults.get("name", ""), disabled=bool(defaults))
+        name = st.text_input(
+            "Food name", value=defaults.get("name", ""), disabled=bool(defaults)
+        )
         cols = st.columns(3)
         fields = [
             ("protein", "Protein (g)"),
@@ -32,7 +36,9 @@ def manage_foods_ui(foods: dict[str, Food]) -> dict[str, Food]:
         values = {}
         for idx, (field, label) in enumerate(fields):
             col = cols[idx % 3]
-            values[field] = col.number_input(label, 0.0, value=float(defaults.get(field, 0)))
+            values[field] = col.number_input(
+                label, 0.0, value=float(defaults.get(field, 0))
+            )
         values["name"] = name.strip()
         return values
 
@@ -48,7 +54,7 @@ def manage_foods_ui(foods: dict[str, Food]) -> dict[str, Food]:
                     foods[vals["name"]] = Food(**vals)
                     save_foods(foods)
                     st.success(f"Added {vals['name']}")
-                    st.experimental_rerun()
+                    st.rerun()
 
     elif action == "Edit":
         target = st.sidebar.selectbox("Select food to edit", sorted(foods.keys()))
@@ -58,7 +64,7 @@ def manage_foods_ui(foods: dict[str, Food]) -> dict[str, Food]:
                 foods[target] = Food(**vals)
                 save_foods(foods)
                 st.success(f"Updated {target}")
-                st.experimental_rerun()
+                st.rerun()
 
     elif action == "Delete":
         victims = st.sidebar.multiselect("Select foods to delete", sorted(foods.keys()))
@@ -67,11 +73,13 @@ def manage_foods_ui(foods: dict[str, Food]) -> dict[str, Food]:
                 foods.pop(v, None)
             save_foods(foods)
             st.success(f"Deleted {', '.join(victims)}")
-            st.experimental_rerun()
+            st.rerun()
 
     return foods
 
+
 # ────────────────────────── Main App ─────────────────────────
+
 
 def main():
     st.set_page_config(page_title="Macro Dashboard", page_icon="📊", layout="wide")
