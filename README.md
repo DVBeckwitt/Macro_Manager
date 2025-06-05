@@ -9,6 +9,7 @@ A Streamlit application to visualize and log your daily macronutrient intake.
 
 ## Installation
 This project requires **Python 3.10–3.11**. Install the latest
+
 dependencies in editable mode with:
 ```bash
 pip install -e .
