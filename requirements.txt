@@ -1,0 +1,7 @@
+streamlit==1.25.0
+pyyaml==6.0
+matplotlib==3.7.2
+pytest==7.4.0
+flake8==6.0.0
+black==24.7.0
+mypy==1.7.0

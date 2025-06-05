@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Streamlit
+.streamlit/
+
+# Virtual environments
+venv/
+.env/
+env/
+
+# Logs & outputs
+*.log
+macro_dashboard.png
+macro_log.csv
+
+# IDE
+.vscode/
+.idea/
