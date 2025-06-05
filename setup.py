@@ -6,11 +6,11 @@ setup(
     description="Daily Macro Dashboard",
     author="",
     packages=find_packages(),
-    python_requires=">=3.10",
+    python_requires=">=3.10,<3.12",
     install_requires=[
-        "streamlit==1.25.0",
-        "pyyaml>=6.0.1",
-        "matplotlib==3.7.2",
+        "streamlit>=1.45",
+        "pyyaml>=6.0",
+        "matplotlib>=3.10",
     ],
     entry_points={
         "console_scripts": [
