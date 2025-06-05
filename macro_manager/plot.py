@@ -47,8 +47,9 @@ def _plot_macros(ax, pct: Dict[str, float], totals: Dict[str, float]) -> None:
         pc = pct[key]
         val = totals[key]
         ax.barh(0, pc, left=left, height=0.30, color=col)
-        extra = f"
-({totals['carb']-totals['fiber']:.0f} net)" if key == "carb" else ""
+        extra = (
+            f" ({totals['carb']-totals['fiber']:.0f} net)" if key == "carb" else ""
+        )
         ax.text(
             left + pc / 2,
             0,
