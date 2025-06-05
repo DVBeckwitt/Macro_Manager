@@ -1,50 +1,13 @@
 import streamlit as st
 import yaml
-from nutrition import Food, Meal, build_dashboard_figure, save_dashboard
 from pathlib import Path
 
-# ────────────────────────── Constants ─────────────────────────
-YAML_FILE = Path("foods.yaml")
+from macro_manager.models import Food, Meal
+from macro_manager.db import load_foods, save_foods
+from macro_manager.plot import build_dashboard_figure, save_dashboard
 
 # ────────────────────────── YAML Helpers ──────────────────────
-
-def load_foods(path: Path = YAML_FILE) -> dict[str, Food]:
-    """Return a dict of Food objects keyed by name."""
-    if not path.exists():
-        path.write_text("{}")  # start empty
-    data = yaml.safe_load(path.read_text()) or {}
-    foods: dict[str, Food] = {}
-    for name, attrs in data.items():
-        foods[name] = Food(
-            name=name,
-            protein=float(attrs.get("protein", 0)),
-            fat=float(attrs.get("fat", 0)),
-            carb=float(attrs.get("carb", 0)),
-            fiber=float(attrs.get("fiber", 0)),
-            add_sugar=float(attrs.get("add_sugar", 0)),
-            sodium=float(attrs.get("sodium", 0)),
-            potassium=float(attrs.get("potassium", 0)),
-        )
-    return foods
-
-
-def foods_to_yaml_dict(foods: dict[str, Food]) -> dict:
-    """Convert Food objects to plain dict ready for YAML dump, omitting zeros."""
-    out = {}
-    for f in foods.values():
-        attrs = {
-            k: getattr(f, k)
-            for k in ("protein", "fat", "carb", "fiber", "add_sugar", "sodium", "potassium")
-        }
-        # drop zero entries for cleaner YAML
-        out[f.name] = {k: v for k, v in attrs.items() if v}
-    return out
-
-
-def save_foods(foods: dict[str, Food], path: Path = YAML_FILE) -> None:
-    """Persist current foods dict to YAML file."""
-    with path.open("w") as f:
-        yaml.safe_dump(foods_to_yaml_dict(foods), f, sort_keys=True)
+# Functions now live in macro_manager.db
 
 # ────────────────────────── Sidebar CRUD UI ───────────────────
 
@@ -57,23 +20,21 @@ def manage_foods_ui(foods: dict[str, Food]) -> dict[str, Food]:
         defaults = defaults or {}
         name = st.text_input("Food name", value=defaults.get("name", ""), disabled=bool(defaults))
         cols = st.columns(3)
-        protein = cols[0].number_input("Protein (g)", 0.0, value=float(defaults.get("protein", 0)))
-        fat = cols[1].number_input("Fat (g)", 0.0, value=float(defaults.get("fat", 0)))
-        carb = cols[2].number_input("Carb (g)", 0.0, value=float(defaults.get("carb", 0)))
-        fiber = cols[0].number_input("Fiber (g)", 0.0, value=float(defaults.get("fiber", 0)))
-        add_sugar = cols[1].number_input("Added sugar (g)", 0.0, value=float(defaults.get("add_sugar", 0)))
-        sodium = cols[2].number_input("Sodium (mg)", 0.0, value=float(defaults.get("sodium", 0)))
-        potassium = cols[0].number_input("Potassium (mg)", 0.0, value=float(defaults.get("potassium", 0)))
-        return {
-            "name": name.strip(),
-            "protein": protein,
-            "fat": fat,
-            "carb": carb,
-            "fiber": fiber,
-            "add_sugar": add_sugar,
-            "sodium": sodium,
-            "potassium": potassium,
-        }
+        fields = [
+            ("protein", "Protein (g)"),
+            ("fat", "Fat (g)"),
+            ("carb", "Carb (g)"),
+            ("fiber", "Fiber (g)"),
+            ("add_sugar", "Added sugar (g)"),
+            ("sodium", "Sodium (mg)"),
+            ("potassium", "Potassium (mg)"),
+        ]
+        values = {}
+        for idx, (field, label) in enumerate(fields):
+            col = cols[idx % 3]
+            values[field] = col.number_input(label, 0.0, value=float(defaults.get(field, 0)))
+        values["name"] = name.strip()
+        return values
 
     if action == "Add":
         with st.sidebar.form("add_form"):
