@@ -101,7 +101,7 @@ def main():
                 meal.add(foods[name], qty)
 
         fig, totals, total_kcal = build_dashboard_figure(meal)
-        st.image(fig, use_container_width=True)
+        st.pyplot(fig, use_container_width=True)
 
         with st.expander("Nutrient Totals", expanded=True):
             stats = {"Calories (kcal)": f"{total_kcal:.0f}"}
