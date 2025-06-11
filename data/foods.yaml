@@ -207,3 +207,22 @@ sweet_nutty_mix_quarter:      # ¼ cup (30 g) Sweet & Nutty Snack Mix
   add_sugar: 6
   sodium: 60
   potassium: 170
+
+# ---------- recent meal ------------------------------------------------------
+margarita_22oz_lemon_frozen:
+  carb: 27.8          # g
+  add_sugar: 27.8     # g        # all the carbs are simple sugar in the mix
+  fat: 0.4            # g
+  fiber: 0.0          # g
+  potassium: 20.0     # mg       # squeeze of lemon contributes a trace amount
+  protein: 0.3        # g
+  sodium: 10.0        # mg
+
+burrito_gonzolaz_chicken:
+  carb: 107.0         # g
+  fat: 29.0           # g
+  fiber: 11.0         # g        # tortilla, beans, veg
+  potassium: 1200.0   # mg
+  protein: 75.0       # g
+  sodium: 1500.0      # mg
+  # add_sugar: 3.0    # g (mostly from queso & tomato—omit if you lump into total carbs)
