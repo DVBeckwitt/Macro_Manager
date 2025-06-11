@@ -119,9 +119,20 @@ def main():
             df = pd.read_csv(log_path, parse_dates=["datetime"])
             df = df.sort_values("datetime")
             st.subheader("Macro Trends")
-            st.line_chart(
-                df.set_index("datetime")[["calories", "protein_g", "fat_g", "carb_g"]]
+            metrics = {
+                "Total Calories": "calories",
+                "Protein (g)": "protein_g",
+                "Fat (g)": "fat_g",
+                "Carbs (g)": "carb_g",
+            }
+            selected = st.multiselect(
+                "Select metrics to plot",
+                list(metrics.keys()),
+                default=list(metrics.keys()),
             )
+            df_idx = df.set_index("datetime")
+            for label in selected:
+                st.line_chart(df_idx[[metrics[label]]], height=200, use_container_width=True)
         else:
             st.info("No log file found. Save your meals to start tracking.")
 
