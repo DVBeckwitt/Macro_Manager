@@ -2,6 +2,7 @@ import datetime
 import csv
 from pathlib import Path
 from typing import Dict, Union
+import pandas as pd
 
 import matplotlib.pyplot as plt
 
@@ -149,6 +150,7 @@ def save_dashboard(meal: Meal, directory: Union[str, Path] = None):
     fig.savefig(png_path, dpi=200, transparent=True)
 
     csv_path = directory / "macro_log.csv"
+    foods_str = "; ".join(f"{f.name}x{q}" for f, q in meal.items)
     row = {
         "datetime": datetime.datetime.now().isoformat(timespec="seconds"),
         "calories": kcal,
@@ -159,11 +161,19 @@ def save_dashboard(meal: Meal, directory: Union[str, Path] = None):
         "added_sugar_g": totals["add_sugar"],
         "sodium_mg": totals["sodium"],
         "potassium_mg": totals["potassium"],
+        "foods": foods_str,
     }
-    write_header = not csv_path.exists() or csv_path.stat().st_size == 0
-    with csv_path.open("a", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=row.keys())
-        if write_header:
-            writer.writeheader()
-        writer.writerow(row)
-    return {"png": png_path, "csv": csv_path}
+
+    df_new = pd.DataFrame([row])
+    replaced = False
+    if csv_path.exists() and csv_path.stat().st_size > 0:
+        df = pd.read_csv(csv_path)
+        df["date"] = pd.to_datetime(df["datetime"]).dt.date
+        today = pd.to_datetime(row["datetime"]).date()
+        replaced = today in df["date"].values
+        df = df[df["date"] != today].drop(columns=["date"])
+        df = pd.concat([df, df_new], ignore_index=True)
+    else:
+        df = df_new
+    df.to_csv(csv_path, index=False)
+    return {"png": png_path, "csv": csv_path, "replaced": replaced}
