@@ -132,6 +132,7 @@ def build_dashboard_figure(meal: Meal):
     pct = {k: (totals[k]*4 if k != 'fat' else totals[k]*9) / kcal * 100 for k in ('protein', 'fat', 'carb')}
 
     fig, ax = plt.subplots(figsize=(7, 3))
+    fig.patch.set_alpha(0)
     ax.patch.set_alpha(0)
     _plot_macros(ax, pct, totals)
     _plot_calories(ax, kcal)
