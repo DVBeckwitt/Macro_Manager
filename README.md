@@ -5,7 +5,8 @@ A Streamlit application to visualize and log your daily macronutrient intake.
 ## Features
 - Dynamic food database driven by `data/foods.yaml`
 - Interactive dashboard with transparent background
-- Exportable PNG and CSV log of daily intake
+- Manually save your daily intake to a CSV log (one entry per day)
+- "Trends" tab to visualize macros over time
 
 ## Installation
 This project requires **Python 3.10–3.11**. Install the latest

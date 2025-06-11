@@ -5,6 +5,7 @@ from pathlib import Path
 from macro_manager.models import Food, Meal
 from macro_manager.db import load_foods, save_foods
 from macro_manager.plot import build_dashboard_figure, save_dashboard
+import pandas as pd
 
 # ────────────────────────── YAML Helpers ──────────────────────
 # Functions now live in macro_manager.db
@@ -79,31 +80,50 @@ def main():
     foods = load_foods()
     foods = manage_foods_ui(foods)  # May mutate dict via sidebar
 
-    st.title("Daily Macro Dashboard 📊")
-    st.caption("⬅️ Use the sidebar to build your meal and manage foods.")
+    tab_dash, tab_trend = st.tabs(["Dashboard", "Trends"])
 
-    # --- Meal builder ---
-    st.sidebar.header("🥗 Build Your Meal")
-    selected = st.sidebar.multiselect("Select foods", sorted(foods.keys()))
-    servings = {
-        name: st.sidebar.number_input(f"{name} servings", 0.0, value=1.0, step=0.25)
-        for name in selected
-    }
+    with tab_dash:
+        st.header("Daily Macro Dashboard 📊")
+        st.caption("⬅️ Use the sidebar to build your meal and manage foods.")
 
-    meal = Meal("Today's Intake")
-    for name, qty in servings.items():
-        if qty:
-            meal.add(foods[name], qty)
+        st.sidebar.header("🥗 Build Your Meal")
+        selected = st.sidebar.multiselect("Select foods", sorted(foods.keys()))
+        servings = {
+            name: st.sidebar.number_input(
+                f"{name} servings", 0.0, value=1.0, step=0.25
+            )
+            for name in selected
+        }
 
-    fig, totals, total_kcal = build_dashboard_figure(meal)
-    paths = save_dashboard(meal)
+        meal = Meal("Today's Intake")
+        for name, qty in servings.items():
+            if qty:
+                meal.add(foods[name], qty)
 
-    st.image(str(paths["png"]), use_container_width=True)
+        fig, totals, total_kcal = build_dashboard_figure(meal)
+        st.image(fig, use_container_width=True)
 
-    with st.expander("Nutrient Totals", expanded=True):
-        stats = {"Calories (kcal)": f"{total_kcal:.0f}"}
-        stats.update({k: f"{v:.1f}" for k, v in totals.items()})
-        st.table(stats)
+        with st.expander("Nutrient Totals", expanded=True):
+            stats = {"Calories (kcal)": f"{total_kcal:.0f}"}
+            stats.update({k: f"{v:.1f}" for k, v in totals.items()})
+            st.table(stats)
+
+        if st.button("💾 Save Day to Log"):
+            paths = save_dashboard(meal)
+            msg = "Updated" if paths.get("replaced") else "Saved"
+            st.success(f"{msg} to {paths['csv']}")
+
+    with tab_trend:
+        log_path = Path(__file__).resolve().parent / "macro_log.csv"
+        if log_path.exists():
+            df = pd.read_csv(log_path, parse_dates=["datetime"])
+            df = df.sort_values("datetime")
+            st.subheader("Macro Trends")
+            st.line_chart(
+                df.set_index("datetime")[["calories", "protein_g", "fat_g", "carb_g"]]
+            )
+        else:
+            st.info("No log file found. Save your meals to start tracking.")
 
 
 if __name__ == "__main__":
