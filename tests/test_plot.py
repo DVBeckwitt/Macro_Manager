@@ -17,6 +17,7 @@ def test_build_dashboard_figure():
     assert fig is not None
     assert totals['carb'] == approx(meal.totals['carb'])
     assert kcal == approx(meal.calories)
+    assert fig.patch.get_alpha() == 0
 
 def test_save_dashboard(tmp_path):
     meal = sample_meal()
