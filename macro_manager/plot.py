@@ -16,6 +16,7 @@ _pale = {
     "fat": "#E59728",
     "carb": "#9C27B0",
     "calorie": "#EC407A",
+    "burned": "#26C6DA",
 }
 
 
@@ -67,45 +68,61 @@ def _plot_macros(ax, pct: Dict[str, float], totals: Dict[str, float]) -> None:
     ax.set_ylim(-1.35, 1)
 
 
-def _plot_calories(ax, kcal: float) -> None:
-    cal_y, cal_h, scale = 0.55, 0.15, 2400
-    ax.barh(cal_y, 100, height=cal_h, color="#888", alpha=0.20, edgecolor="#AAA", lw=0.6)
+def _plot_calorie_bar(ax, kcal: float, y: float, color: str, label: str) -> None:
+    cal_h, scale = 0.13, 2400
+    ax.barh(y, 100, height=cal_h, color="#888", alpha=0.20, edgecolor="#AAA", lw=0.6)
     for s, e, c in [
         (1600, 1800, _pale["orange"]),
         (1800, 2200, _pale["green"]),
         (2200, 2400, _pale["red"]),
     ]:
-        ax.barh(cal_y, (e - s) / scale * 100, left=s / scale * 100, height=cal_h, color=c, alpha=0.15)
-    ax.barh(cal_y, min(kcal / scale, 1) * 100, height=cal_h, left=0, color=_pale["calorie"], alpha=0.70)
+        ax.barh(y, (e - s) / scale * 100, left=s / scale * 100, height=cal_h, color=c, alpha=0.15)
+    ax.barh(y, min(kcal / scale, 1) * 100, height=cal_h, left=0, color=color, alpha=0.70)
     for v in [1600, 1800, 2000, 2200, 2400]:
         ax.vlines(
             v / scale * 100,
-            cal_y - cal_h / 2,
-            cal_y + cal_h / 2,
+            y - cal_h / 2,
+            y + cal_h / 2,
             colors="#FFC107" if v == 2000 else "white",
-            linestyles='-' if v == 2000 else (0, (4, 2)),
+            linestyles="-" if v == 2000 else (0, (4, 2)),
             lw=1,
         )
-        if v == 2000:
-            ax.text(
-                v / scale * 100,
-                cal_y + cal_h / 2 + 0.05,
-                "Target 2000",
-                ha="center",
-                va="bottom",
-                fontsize=7,
-                weight="bold",
-                color="#FFC107",
-            )
     ax.text(
         min(kcal / scale, 1) * 50,
-        cal_y,
+        y,
         f"{kcal:.0f} kcal",
         ha="center",
         va="center",
         fontsize=9,
         weight="bold",
-        color="white" if kcal >= 1600 else "white",
+        color="white",
+    )
+    ax.text(
+        0,
+        y + cal_h / 2 + 0.03,
+        label,
+        ha="left",
+        va="bottom",
+        fontsize=7,
+        weight="bold",
+        color="white",
+    )
+
+
+def _plot_calories(ax, intake_kcal: float, burned_kcal: float) -> None:
+    burned_y = 0.78
+    intake_y = 0.55
+    _plot_calorie_bar(ax, max(burned_kcal, 0), burned_y, _pale["burned"], "Burned")
+    _plot_calorie_bar(ax, max(intake_kcal, 0), intake_y, _pale["calorie"], "Intake")
+    ax.text(
+        2000 / 2400 * 100,
+        burned_y + 0.13 / 2 + 0.05,
+        "Target 2000",
+        ha="center",
+        va="bottom",
+        fontsize=7,
+        weight="bold",
+        color="#FFC107",
     )
 
 
@@ -126,7 +143,7 @@ def _plot_micros(ax, totals: Dict[str, float]) -> None:
         ax.text(x + slot / 2, row_y - bar_h / 2 - 0.03, f"{val:.0f}/{tgt}{unit}", ha='center', va='top', fontsize=7, color='white')
 
 
-def build_dashboard_figure(meal: Meal):
+def build_dashboard_figure(meal: Meal, burned_kcal: float):
     totals = meal.totals
     kcal = meal.calories or 1e-6
     pct = {k: (totals[k]*4 if k != 'fat' else totals[k]*9) / kcal * 100 for k in ('protein', 'fat', 'carb')}
@@ -135,18 +152,24 @@ def build_dashboard_figure(meal: Meal):
     fig.patch.set_alpha(0)
     ax.patch.set_alpha(0)
     _plot_macros(ax, pct, totals)
-    _plot_calories(ax, kcal)
+    _plot_calories(ax, kcal, burned_kcal)
     _plot_micros(ax, totals)
     plt.tight_layout(pad=0.25)
     return fig, totals, kcal
 
 
-def save_dashboard(meal: Meal, directory: Union[str, Path] = None):
+def save_dashboard(
+    meal: Meal,
+    burned_kcal: float,
+    base_burn_kcal: float,
+    workout_adjust_kcal: float,
+    directory: Union[str, Path] = None,
+):
     if directory is None:
         directory = Path(__file__).resolve().parent
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
-    fig, totals, kcal = build_dashboard_figure(meal)
+    fig, totals, kcal = build_dashboard_figure(meal, burned_kcal)
     png_path = directory / "macro_dashboard.png"
     fig.savefig(png_path, dpi=200, transparent=True)
 
@@ -155,6 +178,10 @@ def save_dashboard(meal: Meal, directory: Union[str, Path] = None):
     row = {
         "datetime": datetime.datetime.now().isoformat(timespec="seconds"),
         "calories": kcal,
+        "burned_calories": burned_kcal,
+        "base_burn_calories": base_burn_kcal,
+        "workout_adjust_calories": workout_adjust_kcal,
+        "net_calories": kcal - burned_kcal,
         "protein_g": totals["protein"],
         "fat_g": totals["fat"],
         "carb_g": totals["carb"],
