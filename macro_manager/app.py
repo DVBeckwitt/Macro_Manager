@@ -233,6 +233,7 @@ def main():
                 burned_kcal=burned_kcal,
                 base_burn_kcal=base_burn_kcal,
                 workout_adjust_kcal=workout_adjust_kcal,
+                weight_kg=weight_kg,
             )
             msg = "Updated" if paths.get("replaced") else "Saved"
             st.success(f"{msg} to {paths['csv']}")

@@ -153,6 +153,7 @@ def save_dashboard(
     burned_kcal: float,
     base_burn_kcal: float,
     workout_adjust_kcal: float,
+    weight_kg: float | None = None,
     directory: Union[str, Path] = None,
 ):
     if directory is None:
@@ -172,6 +173,7 @@ def save_dashboard(
         "base_burn_calories": base_burn_kcal,
         "workout_adjust_calories": workout_adjust_kcal,
         "net_calories": kcal - burned_kcal,
+        "weight_kg": weight_kg,
         "protein_g": totals["protein"],
         "fat_g": totals["fat"],
         "carb_g": totals["carb"],
