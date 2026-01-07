@@ -1,5 +1,4 @@
 import streamlit as st
-import yaml
 from pathlib import Path
 
 from macro_manager.models import Food, Meal
@@ -42,21 +41,12 @@ def calculate_bmr(sex: str, weight_kg: float, height_cm: float, age: float) -> f
     return max(base, 0.0)
 
 
-def activity_multiplier(level: str) -> float:
-    return {
-        "Sedentary": 1.2,
-        "Light": 1.375,
-        "Moderate": 1.55,
-        "Active": 1.725,
-        "Athlete": 1.9,
-    }.get(level, 1.2)
-
 # ────────────────────────── Sidebar CRUD UI ───────────────────
 
 def manage_foods_ui(foods: dict[str, Food]) -> dict[str, Food]:
     """Render UI to add/edit/delete foods. Return potentially mutated dict."""
-    st.sidebar.header("🛠️ Manage Foods")
-    action = st.sidebar.radio("Select action", ["Add", "Edit", "Delete", "None"], index=3)
+    with st.sidebar.expander("🛠️ Manage Foods", expanded=False):
+        action = st.radio("Select action", ["Add", "Edit", "Delete", "None"], index=3)
 
     def food_form(defaults: dict | None = None):
         defaults = defaults or {}
@@ -79,7 +69,7 @@ def manage_foods_ui(foods: dict[str, Food]) -> dict[str, Food]:
         return values
 
     if action == "Add":
-        with st.sidebar.form("add_form"):
+        with st.form("add_form"):
             vals = food_form()
             if st.form_submit_button("➕ Add Food"):
                 if not vals["name"]:
@@ -93,8 +83,8 @@ def manage_foods_ui(foods: dict[str, Food]) -> dict[str, Food]:
                     rerun_app()
 
     elif action == "Edit":
-        target = st.sidebar.selectbox("Select food to edit", sorted(foods.keys()))
-        with st.sidebar.form("edit_form"):
+        target = st.selectbox("Select food to edit", sorted(foods.keys()))
+        with st.form("edit_form"):
             vals = food_form({**foods[target].__dict__})
             if st.form_submit_button("💾 Save Changes"):
                 foods[target] = Food(**vals)
@@ -103,8 +93,8 @@ def manage_foods_ui(foods: dict[str, Food]) -> dict[str, Food]:
                 rerun_app()
 
     elif action == "Delete":
-        victims = st.sidebar.multiselect("Select foods to delete", sorted(foods.keys()))
-        if st.sidebar.button("🗑️ Delete Selected", disabled=not victims):
+        victims = st.multiselect("Select foods to delete", sorted(foods.keys()))
+        if st.button("🗑️ Delete Selected", disabled=not victims):
             for v in victims:
                 foods.pop(v, None)
             save_foods(foods)
@@ -175,43 +165,32 @@ def main():
 
         st.sidebar.header("🔥 Burned Calories")
         profile = load_profile()
-        sex_options = ["", "Female", "Male"]
-        sex_default = profile.get("sex", "")
-        if sex_default not in sex_options:
-            sex_default = ""
-        sex = st.sidebar.selectbox(
-            "Sex",
-            sex_options,
-            index=sex_options.index(sex_default),
-        )
-        age = st.sidebar.number_input("Age", 0.0, value=float(profile.get("age", 0)))
-        height_cm = st.sidebar.number_input("Height (cm)", 0.0, value=float(profile.get("height_cm", 0)))
-        weight_kg = st.sidebar.number_input("Weight (kg)", 0.0, value=float(profile.get("weight_kg", 0)))
-        activity_levels = ["Sedentary", "Light", "Moderate", "Active", "Athlete"]
-        activity_default = profile.get("activity_level", "Sedentary")
-        if activity_default not in activity_levels:
-            activity_default = "Sedentary"
-        activity_level = st.sidebar.selectbox(
-            "Activity level",
-            activity_levels,
-            index=activity_levels.index(activity_default),
-        )
-        if st.sidebar.button("💾 Save profile"):
-            save_profile(
-                {
-                    "sex": sex,
-                    "age": age,
-                    "height_cm": height_cm,
-                    "weight_kg": weight_kg,
-                    "activity_level": activity_level,
-                }
+        with st.sidebar.expander("Profile (auto-saved)", expanded=False):
+            sex_options = ["", "Female", "Male"]
+            sex_default = profile.get("sex", "")
+            if sex_default not in sex_options:
+                sex_default = ""
+            sex = st.selectbox(
+                "Sex",
+                sex_options,
+                index=sex_options.index(sex_default),
             )
-            st.sidebar.success("Profile saved.")
+            age = st.number_input("Age", 0.0, value=float(profile.get("age", 0)))
+            height_cm = st.number_input("Height (cm)", 0.0, value=float(profile.get("height_cm", 0)))
+            weight_kg = st.number_input("Weight (kg)", 0.0, value=float(profile.get("weight_kg", 0)))
+        profile_payload = {
+            "sex": sex,
+            "age": age,
+            "height_cm": height_cm,
+            "weight_kg": weight_kg,
+        }
+        if profile_payload != profile:
+            save_profile(profile_payload)
 
         bmr = calculate_bmr(sex, weight_kg, height_cm, age)
-        base_burn_kcal = bmr * activity_multiplier(activity_level)
-        st.sidebar.metric("Estimated base burn", f"{base_burn_kcal:.0f} kcal")
-        st.sidebar.caption("Estimate = BMR x activity level. Add workout adjustments below.")
+        base_burn_kcal = bmr
+        st.sidebar.metric("Estimated base burn (BMR)", f"{base_burn_kcal:.0f} kcal")
+        st.sidebar.caption("Base burn uses BMR only. Add workout adjustments below.")
 
         if "workouts" not in st.session_state:
             st.session_state["workouts"] = []
