@@ -3,7 +3,7 @@ import yaml
 from pathlib import Path
 
 from macro_manager.models import Food, Meal
-from macro_manager.db import load_foods, save_foods
+from macro_manager.db import load_foods, save_foods, load_profile, save_profile
 from macro_manager.plot import build_dashboard_figure, save_dashboard
 import pandas as pd
 
@@ -29,6 +29,27 @@ def parse_logged_foods(foods_str: str) -> dict[str, float]:
         except ValueError:
             continue
     return parsed
+
+
+def calculate_bmr(sex: str, weight_kg: float, height_cm: float, age: float) -> float:
+    if not all([sex, weight_kg, height_cm, age]):
+        return 0.0
+    base = 10 * weight_kg + 6.25 * height_cm - 5 * age
+    if sex == "Male":
+        base += 5
+    elif sex == "Female":
+        base -= 161
+    return max(base, 0.0)
+
+
+def activity_multiplier(level: str) -> float:
+    return {
+        "Sedentary": 1.2,
+        "Light": 1.375,
+        "Moderate": 1.55,
+        "Active": 1.725,
+        "Athlete": 1.9,
+    }.get(level, 1.2)
 
 # ────────────────────────── Sidebar CRUD UI ───────────────────
 
@@ -152,16 +173,88 @@ def main():
             if qty:
                 meal.add(foods[name], qty)
 
-        fig, totals, total_kcal = build_dashboard_figure(meal)
+        st.sidebar.header("🔥 Burned Calories")
+        profile = load_profile()
+        sex_options = ["", "Female", "Male"]
+        sex_default = profile.get("sex", "")
+        if sex_default not in sex_options:
+            sex_default = ""
+        sex = st.sidebar.selectbox(
+            "Sex",
+            sex_options,
+            index=sex_options.index(sex_default),
+        )
+        age = st.sidebar.number_input("Age", 0.0, value=float(profile.get("age", 0)))
+        height_cm = st.sidebar.number_input("Height (cm)", 0.0, value=float(profile.get("height_cm", 0)))
+        weight_kg = st.sidebar.number_input("Weight (kg)", 0.0, value=float(profile.get("weight_kg", 0)))
+        activity_levels = ["Sedentary", "Light", "Moderate", "Active", "Athlete"]
+        activity_default = profile.get("activity_level", "Sedentary")
+        if activity_default not in activity_levels:
+            activity_default = "Sedentary"
+        activity_level = st.sidebar.selectbox(
+            "Activity level",
+            activity_levels,
+            index=activity_levels.index(activity_default),
+        )
+        if st.sidebar.button("💾 Save profile"):
+            save_profile(
+                {
+                    "sex": sex,
+                    "age": age,
+                    "height_cm": height_cm,
+                    "weight_kg": weight_kg,
+                    "activity_level": activity_level,
+                }
+            )
+            st.sidebar.success("Profile saved.")
+
+        bmr = calculate_bmr(sex, weight_kg, height_cm, age)
+        base_burn_kcal = bmr * activity_multiplier(activity_level)
+        st.sidebar.metric("Estimated base burn", f"{base_burn_kcal:.0f} kcal")
+        st.sidebar.caption("Estimate = BMR x activity level. Add workout adjustments below.")
+
+        if "workouts" not in st.session_state:
+            st.session_state["workouts"] = []
+        workout_df = st.sidebar.data_editor(
+            pd.DataFrame(st.session_state["workouts"], columns=["Workout", "Calories"]),
+            num_rows="dynamic",
+            use_container_width=True,
+            column_config={
+                "Workout": st.column_config.TextColumn("Workout"),
+                "Calories": st.column_config.NumberColumn(
+                    "Calories (kcal)",
+                    step=10,
+                    help="Use negative values for underestimates or rest days.",
+                ),
+            },
+            key="workout_editor",
+        )
+        st.session_state["workouts"] = workout_df.to_dict("records")
+        workout_adjust_kcal = 0.0
+        if not workout_df.empty and "Calories" in workout_df:
+            workout_adjust_kcal = float(workout_df["Calories"].fillna(0).sum())
+
+        burned_kcal = max(base_burn_kcal + workout_adjust_kcal, 0.0)
+
+        fig, totals, total_kcal = build_dashboard_figure(meal, burned_kcal)
         st.pyplot(fig, use_container_width=True)
 
         with st.expander("Nutrient Totals", expanded=True):
-            stats = {"Calories (kcal)": f"{total_kcal:.0f}"}
+            stats = {
+                "Calories (kcal)": f"{total_kcal:.0f}",
+                "Burned (kcal)": f"{burned_kcal:.0f}",
+                "Net (kcal)": f"{total_kcal - burned_kcal:.0f}",
+            }
             stats.update({k: f"{v:.1f}" for k, v in totals.items()})
             st.table(stats)
 
         if st.button("💾 Save Day to Log"):
-            paths = save_dashboard(meal)
+            paths = save_dashboard(
+                meal,
+                burned_kcal=burned_kcal,
+                base_burn_kcal=base_burn_kcal,
+                workout_adjust_kcal=workout_adjust_kcal,
+            )
             msg = "Updated" if paths.get("replaced") else "Saved"
             st.success(f"{msg} to {paths['csv']}")
 
@@ -170,9 +263,19 @@ def main():
         if log_path.exists():
             df = pd.read_csv(log_path, parse_dates=["datetime"])
             df = df.sort_values("datetime")
+            for col in [
+                "burned_calories",
+                "net_calories",
+                "base_burn_calories",
+                "workout_adjust_calories",
+            ]:
+                if col not in df:
+                    df[col] = 0.0
             st.subheader("Macro Trends")
             metrics = {
                 "Total Calories": "calories",
+                "Burned Calories": "burned_calories",
+                "Net Calories": "net_calories",
                 "Protein (g)": "protein_g",
                 "Fat (g)": "fat_g",
                 "Carbs (g)": "carb_g",
