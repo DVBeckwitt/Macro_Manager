@@ -188,9 +188,11 @@ def main():
             save_profile(profile_payload)
 
         bmr = calculate_bmr(sex, weight_kg, height_cm, age)
-        base_burn_kcal = bmr
-        st.sidebar.metric("Estimated base burn (BMR)", f"{base_burn_kcal:.0f} kcal")
-        st.sidebar.caption("Base burn uses BMR only. Add workout adjustments below.")
+        base_burn_kcal = bmr * 1.2
+        st.sidebar.metric("Estimated base burn (sedentary TDEE)", f"{base_burn_kcal:.0f} kcal")
+        st.sidebar.caption(
+            "Base burn uses sedentary TDEE (BMR x 1.2). Add workout adjustments below."
+        )
 
         if "workouts" not in st.session_state:
             st.session_state["workouts"] = []
