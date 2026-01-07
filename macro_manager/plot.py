@@ -68,7 +68,17 @@ def _plot_macros(ax, pct: Dict[str, float], totals: Dict[str, float]) -> None:
     ax.set_ylim(-1.35, 1)
 
 
-def _plot_calorie_bar(ax, kcal: float, y: float, color: str, label: str) -> None:
+def _plot_calorie_bar(
+    ax,
+    kcal: float,
+    y: float,
+    color: str,
+    label: str,
+    *,
+    show_guides: bool = True,
+    error_margin: float | None = None,
+    goal_kcal: float | None = None,
+) -> None:
     cal_h, scale = 0.13, 2400
     ax.barh(y, 100, height=cal_h, color="#888", alpha=0.20, edgecolor="#AAA", lw=0.6)
     for s, e, c in [
@@ -78,14 +88,40 @@ def _plot_calorie_bar(ax, kcal: float, y: float, color: str, label: str) -> None
     ]:
         ax.barh(y, (e - s) / scale * 100, left=s / scale * 100, height=cal_h, color=c, alpha=0.15)
     ax.barh(y, min(kcal / scale, 1) * 100, height=cal_h, left=0, color=color, alpha=0.70)
-    for v in [1600, 1800, 2000, 2200, 2400]:
-        ax.vlines(
-            v / scale * 100,
-            y - cal_h / 2,
-            y + cal_h / 2,
-            colors="#FFC107" if v == 2000 else "white",
-            linestyles="-" if v == 2000 else (0, (4, 2)),
-            lw=1,
+    if show_guides:
+        for v in [1600, 1800, 2000, 2200, 2400]:
+            ax.vlines(
+                v / scale * 100,
+                y - cal_h / 2,
+                y + cal_h / 2,
+                colors="white",
+                linestyles=(0, (4, 2)),
+                lw=1,
+            )
+    if error_margin:
+        lower = max(kcal - error_margin, 0)
+        upper = min(kcal + error_margin, scale)
+        left = lower / scale * 100
+        width = max(upper - lower, 0) / scale * 100
+        ax.barh(
+            y,
+            width,
+            height=cal_h * 0.35,
+            left=left,
+            color="white",
+            alpha=0.95,
+        )
+    if goal_kcal is not None:
+        goal_x = goal_kcal / scale * 100
+        ax.text(
+            goal_x,
+            y - cal_h / 2 - 0.05,
+            f"Goal {goal_kcal:.0f}",
+            ha="center",
+            va="top",
+            fontsize=7,
+            weight="bold",
+            color="#FFC107",
         )
     ax.text(
         min(kcal / scale, 1) * 50,
@@ -109,20 +145,35 @@ def _plot_calorie_bar(ax, kcal: float, y: float, color: str, label: str) -> None
     )
 
 
-def _plot_calories(ax, intake_kcal: float, burned_kcal: float) -> None:
+def _plot_calories(
+    ax,
+    intake_kcal: float,
+    burned_kcal: float,
+    burned_error_kcal: float | None = None,
+) -> None:
     burned_y = 0.78
     intake_y = 0.55
-    _plot_calorie_bar(ax, max(burned_kcal, 0), burned_y, _pale["burned"], "Burned")
-    _plot_calorie_bar(ax, max(intake_kcal, 0), intake_y, _pale["calorie"], "Intake")
-    ax.text(
-        2000 / 2400 * 100,
-        burned_y + 0.13 / 2 + 0.05,
-        "Target 2000",
-        ha="center",
-        va="bottom",
-        fontsize=7,
-        weight="bold",
-        color="#FFC107",
+    burned_value = max(burned_kcal, 0)
+    if burned_error_kcal is not None:
+        burned_margin = max(burned_error_kcal, 0.0)
+    else:
+        burned_margin = max(burned_value * 0.05, 50.0) if burned_value else 0.0
+    _plot_calorie_bar(
+        ax,
+        burned_value,
+        burned_y,
+        _pale["burned"],
+        "Burned",
+        show_guides=False,
+        error_margin=burned_margin if burned_margin else None,
+    )
+    _plot_calorie_bar(
+        ax,
+        max(intake_kcal, 0),
+        intake_y,
+        _pale["calorie"],
+        "Intake",
+        goal_kcal=2000,
     )
 
 
@@ -143,7 +194,11 @@ def _plot_micros(ax, totals: Dict[str, float]) -> None:
         ax.text(x + slot / 2, row_y - bar_h / 2 - 0.03, f"{val:.0f}/{tgt}{unit}", ha='center', va='top', fontsize=7, color='white')
 
 
-def build_dashboard_figure(meal: Meal, burned_kcal: float):
+def build_dashboard_figure(
+    meal: Meal,
+    burned_kcal: float,
+    burned_error_kcal: float | None = None,
+):
     totals = meal.totals
     kcal = meal.calories or 1e-6
     pct = {k: (totals[k]*4 if k != 'fat' else totals[k]*9) / kcal * 100 for k in ('protein', 'fat', 'carb')}
@@ -152,7 +207,7 @@ def build_dashboard_figure(meal: Meal, burned_kcal: float):
     fig.patch.set_alpha(0)
     ax.patch.set_alpha(0)
     _plot_macros(ax, pct, totals)
-    _plot_calories(ax, kcal, burned_kcal)
+    _plot_calories(ax, kcal, burned_kcal, burned_error_kcal)
     _plot_micros(ax, totals)
     plt.tight_layout(pad=0.25)
     return fig, totals, kcal
@@ -163,6 +218,8 @@ def save_dashboard(
     burned_kcal: float,
     base_burn_kcal: float,
     workout_adjust_kcal: float,
+    workout_error_kcal: float = 0.0,
+    weight_kg: float | None = None,
     directory: Union[str, Path] = None,
 ):
     if directory is None:
@@ -181,7 +238,9 @@ def save_dashboard(
         "burned_calories": burned_kcal,
         "base_burn_calories": base_burn_kcal,
         "workout_adjust_calories": workout_adjust_kcal,
+        "workout_error_calories": workout_error_kcal,
         "net_calories": kcal - burned_kcal,
+        "weight_kg": weight_kg,
         "protein_g": totals["protein"],
         "fat_g": totals["fat"],
         "carb_g": totals["carb"],

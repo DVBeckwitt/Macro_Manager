@@ -7,6 +7,3 @@ cd /d "%~dp0"
 python -m streamlit run macro_manager/app.py %*
 
 :done
-echo --------------------------------------------------
-echo  Press any key to close this window …
-pause >nul
