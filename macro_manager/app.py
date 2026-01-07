@@ -217,6 +217,17 @@ def main():
 
         burned_kcal = max(base_burn_kcal + workout_adjust_kcal, 0.0)
 
+        if st.button("💾 Save Day to Log"):
+            paths = save_dashboard(
+                meal,
+                burned_kcal=burned_kcal,
+                base_burn_kcal=base_burn_kcal,
+                workout_adjust_kcal=workout_adjust_kcal,
+                weight_kg=weight_kg,
+            )
+            msg = "Updated" if paths.get("replaced") else "Saved"
+            st.success(f"{msg} to {paths['csv']}")
+
         fig, totals, total_kcal = build_dashboard_figure(meal, burned_kcal)
         st.pyplot(fig, use_container_width=True)
 
@@ -228,17 +239,6 @@ def main():
             }
             stats.update({k: f"{v:.1f}" for k, v in totals.items()})
             st.table(stats)
-
-        if st.button("💾 Save Day to Log"):
-            paths = save_dashboard(
-                meal,
-                burned_kcal=burned_kcal,
-                base_burn_kcal=base_burn_kcal,
-                workout_adjust_kcal=workout_adjust_kcal,
-                weight_kg=weight_kg,
-            )
-            msg = "Updated" if paths.get("replaced") else "Saved"
-            st.success(f"{msg} to {paths['csv']}")
 
     with tab_trend:
         log_path = Path(__file__).resolve().parent / "macro_log.csv"

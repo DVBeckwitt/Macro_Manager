@@ -115,10 +115,10 @@ def _plot_calorie_bar(
         goal_x = goal_kcal / scale * 100
         ax.text(
             goal_x,
-            y + cal_h / 2 + 0.05,
+            y - cal_h / 2 - 0.05,
             f"Goal {goal_kcal:.0f}",
             ha="center",
-            va="bottom",
+            va="top",
             fontsize=7,
             weight="bold",
             color="#FFC107",
