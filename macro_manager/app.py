@@ -1,3 +1,4 @@
+import os
 import streamlit as st
 from pathlib import Path
 
@@ -5,9 +6,32 @@ from macro_manager.models import Food, Meal
 from macro_manager.db import load_foods, save_foods, load_profile, save_profile
 from macro_manager.plot import build_dashboard_figure, save_dashboard
 import pandas as pd
+from streamlit.runtime import runtime
 
 # ────────────────────────── YAML Helpers ──────────────────────
 # Functions now live in macro_manager.db
+
+_SHUTDOWN_HOOK_INSTALLED = False
+
+
+def install_session_shutdown_hook() -> None:
+    global _SHUTDOWN_HOOK_INSTALLED
+    if _SHUTDOWN_HOOK_INSTALLED or not runtime.Runtime.exists():
+        return
+    rt = runtime.Runtime.instance()
+    if getattr(rt, "_macro_manager_shutdown_hook", False):
+        _SHUTDOWN_HOOK_INSTALLED = True
+        return
+    original = rt._on_session_disconnected
+
+    def _wrapped_on_disconnect() -> None:
+        original()
+        if rt._session_mgr.num_active_sessions() == 0:
+            os._exit(0)
+
+    rt._on_session_disconnected = _wrapped_on_disconnect
+    rt._macro_manager_shutdown_hook = True
+    _SHUTDOWN_HOOK_INSTALLED = True
 
 
 def rerun_app() -> None:
@@ -107,6 +131,7 @@ def manage_foods_ui(foods: dict[str, Food]) -> dict[str, Food]:
 
 def main():
     st.set_page_config(page_title="Macro Dashboard", page_icon="📊", layout="wide")
+    install_session_shutdown_hook()
 
     foods = load_foods()
     foods = manage_foods_ui(foods)  # May mutate dict via sidebar
