@@ -145,11 +145,19 @@ def _plot_calorie_bar(
     )
 
 
-def _plot_calories(ax, intake_kcal: float, burned_kcal: float) -> None:
+def _plot_calories(
+    ax,
+    intake_kcal: float,
+    burned_kcal: float,
+    burned_error_kcal: float | None = None,
+) -> None:
     burned_y = 0.78
     intake_y = 0.55
     burned_value = max(burned_kcal, 0)
-    burned_margin = max(burned_value * 0.05, 50.0) if burned_value else 0.0
+    if burned_error_kcal is not None:
+        burned_margin = max(burned_error_kcal, 0.0)
+    else:
+        burned_margin = max(burned_value * 0.05, 50.0) if burned_value else 0.0
     _plot_calorie_bar(
         ax,
         burned_value,
@@ -186,7 +194,11 @@ def _plot_micros(ax, totals: Dict[str, float]) -> None:
         ax.text(x + slot / 2, row_y - bar_h / 2 - 0.03, f"{val:.0f}/{tgt}{unit}", ha='center', va='top', fontsize=7, color='white')
 
 
-def build_dashboard_figure(meal: Meal, burned_kcal: float):
+def build_dashboard_figure(
+    meal: Meal,
+    burned_kcal: float,
+    burned_error_kcal: float | None = None,
+):
     totals = meal.totals
     kcal = meal.calories or 1e-6
     pct = {k: (totals[k]*4 if k != 'fat' else totals[k]*9) / kcal * 100 for k in ('protein', 'fat', 'carb')}
@@ -195,7 +207,7 @@ def build_dashboard_figure(meal: Meal, burned_kcal: float):
     fig.patch.set_alpha(0)
     ax.patch.set_alpha(0)
     _plot_macros(ax, pct, totals)
-    _plot_calories(ax, kcal, burned_kcal)
+    _plot_calories(ax, kcal, burned_kcal, burned_error_kcal)
     _plot_micros(ax, totals)
     plt.tight_layout(pad=0.25)
     return fig, totals, kcal
@@ -206,6 +218,7 @@ def save_dashboard(
     burned_kcal: float,
     base_burn_kcal: float,
     workout_adjust_kcal: float,
+    workout_error_kcal: float = 0.0,
     weight_kg: float | None = None,
     directory: Union[str, Path] = None,
 ):
@@ -225,6 +238,7 @@ def save_dashboard(
         "burned_calories": burned_kcal,
         "base_burn_calories": base_burn_kcal,
         "workout_adjust_calories": workout_adjust_kcal,
+        "workout_error_calories": workout_error_kcal,
         "net_calories": kcal - burned_kcal,
         "weight_kg": weight_kg,
         "protein_g": totals["protein"],

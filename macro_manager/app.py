@@ -222,7 +222,10 @@ def main():
         if "workouts" not in st.session_state:
             st.session_state["workouts"] = []
         workout_df = st.sidebar.data_editor(
-            pd.DataFrame(st.session_state["workouts"], columns=["Workout", "Calories"]),
+            pd.DataFrame(
+                st.session_state["workouts"],
+                columns=["Workout", "Calories", "Error (kcal)"],
+            ),
             num_rows="dynamic",
             use_container_width=True,
             column_config={
@@ -232,15 +235,24 @@ def main():
                     step=10,
                     help="Use negative values for underestimates or rest days.",
                 ),
+                "Error (kcal)": st.column_config.NumberColumn(
+                    "Error (kcal)",
+                    step=5,
+                    help="Estimated error range for this workout entry.",
+                ),
             },
             key="workout_editor",
         )
         st.session_state["workouts"] = workout_df.to_dict("records")
         workout_adjust_kcal = 0.0
+        workout_error_kcal = 0.0
         if not workout_df.empty and "Calories" in workout_df:
             workout_adjust_kcal = float(workout_df["Calories"].fillna(0).sum())
+        if not workout_df.empty and "Error (kcal)" in workout_df:
+            workout_error_kcal = float(workout_df["Error (kcal)"].fillna(0).abs().sum())
 
         burned_kcal = max(base_burn_kcal + workout_adjust_kcal, 0.0)
+        burned_error_kcal = workout_error_kcal or None
 
         if st.button("💾 Save Day to Log"):
             paths = save_dashboard(
@@ -248,12 +260,17 @@ def main():
                 burned_kcal=burned_kcal,
                 base_burn_kcal=base_burn_kcal,
                 workout_adjust_kcal=workout_adjust_kcal,
+                workout_error_kcal=burned_error_kcal or 0.0,
                 weight_kg=weight_kg,
             )
             msg = "Updated" if paths.get("replaced") else "Saved"
             st.success(f"{msg} to {paths['csv']}")
 
-        fig, totals, total_kcal = build_dashboard_figure(meal, burned_kcal)
+        fig, totals, total_kcal = build_dashboard_figure(
+            meal,
+            burned_kcal,
+            burned_error_kcal=burned_error_kcal,
+        )
         st.pyplot(fig, use_container_width=True)
 
         with st.expander("Nutrient Totals", expanded=True):
