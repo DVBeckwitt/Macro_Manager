@@ -10,6 +10,26 @@ import pandas as pd
 # ────────────────────────── YAML Helpers ──────────────────────
 # Functions now live in macro_manager.db
 
+
+def rerun_app() -> None:
+    rerun = getattr(st, "rerun", None)
+    if rerun is None:
+        rerun = st.experimental_rerun
+    rerun()
+
+
+def parse_logged_foods(foods_str: str) -> dict[str, float]:
+    parsed: dict[str, float] = {}
+    for item in foods_str.split("; "):
+        if not item:
+            continue
+        name_part, qty_part = item.rsplit("x", 1)
+        try:
+            parsed[name_part] = float(qty_part)
+        except ValueError:
+            continue
+    return parsed
+
 # ────────────────────────── Sidebar CRUD UI ───────────────────
 
 def manage_foods_ui(foods: dict[str, Food]) -> dict[str, Food]:
@@ -49,7 +69,7 @@ def manage_foods_ui(foods: dict[str, Food]) -> dict[str, Food]:
                     foods[vals["name"]] = Food(**vals)
                     save_foods(foods)
                     st.success(f"Added {vals['name']}")
-                    st.experimental_rerun()
+                    rerun_app()
 
     elif action == "Edit":
         target = st.sidebar.selectbox("Select food to edit", sorted(foods.keys()))
@@ -59,7 +79,7 @@ def manage_foods_ui(foods: dict[str, Food]) -> dict[str, Food]:
                 foods[target] = Food(**vals)
                 save_foods(foods)
                 st.success(f"Updated {target}")
-                st.experimental_rerun()
+                rerun_app()
 
     elif action == "Delete":
         victims = st.sidebar.multiselect("Select foods to delete", sorted(foods.keys()))
@@ -68,7 +88,7 @@ def manage_foods_ui(foods: dict[str, Food]) -> dict[str, Food]:
                 foods.pop(v, None)
             save_foods(foods)
             st.success(f"Deleted {', '.join(victims)}")
-            st.experimental_rerun()
+            rerun_app()
 
     return foods
 
@@ -87,10 +107,42 @@ def main():
         st.caption("⬅️ Use the sidebar to build your meal and manage foods.")
 
         st.sidebar.header("🥗 Build Your Meal")
-        selected = st.sidebar.multiselect("Select foods", sorted(foods.keys()))
+        log_path = Path(__file__).resolve().parent / "macro_log.csv"
+        if log_path.exists():
+            df_log = pd.read_csv(log_path, parse_dates=["datetime"])
+            if not df_log.empty:
+                df_log["date"] = df_log["datetime"].dt.date
+                load_date = st.sidebar.selectbox(
+                    "Load previous day",
+                    sorted(df_log["date"].unique(), reverse=True),
+                )
+                if st.sidebar.button("📥 Load day into meal builder"):
+                    row = df_log.loc[df_log["date"] == load_date].iloc[-1]
+                    logged_foods = parse_logged_foods(row.get("foods", ""))
+                    available_foods = [name for name in logged_foods if name in foods]
+                    missing_foods = sorted(set(logged_foods) - set(available_foods))
+                    st.session_state["selected_foods"] = available_foods
+                    for name, qty in logged_foods.items():
+                        if name in foods:
+                            st.session_state[f"serving_{name}"] = qty
+                    if missing_foods:
+                        st.sidebar.warning(
+                            "Missing foods not found in your library: "
+                            f"{', '.join(missing_foods)}"
+                        )
+
+        selected = st.sidebar.multiselect(
+            "Select foods",
+            sorted(foods.keys()),
+            key="selected_foods",
+        )
         servings = {
             name: st.sidebar.number_input(
-                f"{name} servings", 0.0, value=1.0, step=0.25
+                f"{name} servings",
+                0.0,
+                value=st.session_state.get(f"serving_{name}", 1.0),
+                step=0.25,
+                key=f"serving_{name}",
             )
             for name in selected
         }
