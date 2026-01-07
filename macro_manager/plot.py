@@ -83,8 +83,8 @@ def _plot_calorie_bar(ax, kcal: float, y: float, color: str, label: str) -> None
             v / scale * 100,
             y - cal_h / 2,
             y + cal_h / 2,
-            colors="#FFC107" if v == 2000 else "white",
-            linestyles="-" if v == 2000 else (0, (4, 2)),
+            colors="white",
+            linestyles=(0, (4, 2)),
             lw=1,
         )
     ax.text(
@@ -114,16 +114,6 @@ def _plot_calories(ax, intake_kcal: float, burned_kcal: float) -> None:
     intake_y = 0.55
     _plot_calorie_bar(ax, max(burned_kcal, 0), burned_y, _pale["burned"], "Burned")
     _plot_calorie_bar(ax, max(intake_kcal, 0), intake_y, _pale["calorie"], "Intake")
-    ax.text(
-        2000 / 2400 * 100,
-        burned_y + 0.13 / 2 + 0.05,
-        "Target 2000",
-        ha="center",
-        va="bottom",
-        fontsize=7,
-        weight="bold",
-        color="#FFC107",
-    )
 
 
 def _plot_micros(ax, totals: Dict[str, float]) -> None:
@@ -163,6 +153,7 @@ def save_dashboard(
     burned_kcal: float,
     base_burn_kcal: float,
     workout_adjust_kcal: float,
+    weight_kg: float | None = None,
     directory: Union[str, Path] = None,
 ):
     if directory is None:
@@ -182,6 +173,7 @@ def save_dashboard(
         "base_burn_calories": base_burn_kcal,
         "workout_adjust_calories": workout_adjust_kcal,
         "net_calories": kcal - burned_kcal,
+        "weight_kg": weight_kg,
         "protein_g": totals["protein"],
         "fat_g": totals["fat"],
         "carb_g": totals["carb"],
