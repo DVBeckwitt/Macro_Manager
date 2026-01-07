@@ -10,6 +10,13 @@ import pandas as pd
 # ────────────────────────── YAML Helpers ──────────────────────
 # Functions now live in macro_manager.db
 
+
+def rerun_app() -> None:
+    rerun = getattr(st, "rerun", None)
+    if rerun is None:
+        rerun = st.experimental_rerun
+    rerun()
+
 # ────────────────────────── Sidebar CRUD UI ───────────────────
 
 def manage_foods_ui(foods: dict[str, Food]) -> dict[str, Food]:
@@ -49,7 +56,7 @@ def manage_foods_ui(foods: dict[str, Food]) -> dict[str, Food]:
                     foods[vals["name"]] = Food(**vals)
                     save_foods(foods)
                     st.success(f"Added {vals['name']}")
-                    st.experimental_rerun()
+                    rerun_app()
 
     elif action == "Edit":
         target = st.sidebar.selectbox("Select food to edit", sorted(foods.keys()))
@@ -59,7 +66,7 @@ def manage_foods_ui(foods: dict[str, Food]) -> dict[str, Food]:
                 foods[target] = Food(**vals)
                 save_foods(foods)
                 st.success(f"Updated {target}")
-                st.experimental_rerun()
+                rerun_app()
 
     elif action == "Delete":
         victims = st.sidebar.multiselect("Select foods to delete", sorted(foods.keys()))
@@ -68,7 +75,7 @@ def manage_foods_ui(foods: dict[str, Food]) -> dict[str, Food]:
                 foods.pop(v, None)
             save_foods(foods)
             st.success(f"Deleted {', '.join(victims)}")
-            st.experimental_rerun()
+            rerun_app()
 
     return foods
 
