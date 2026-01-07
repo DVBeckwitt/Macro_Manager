@@ -6,6 +6,7 @@ from .models import Food
 BASE_DIR = Path(__file__).resolve().parents[1]
 DATA_DIR = BASE_DIR / "data"
 FOODS_YAML = DATA_DIR / "foods.yaml"
+PROFILE_YAML = DATA_DIR / "profile.yaml"
 
 
 def load_foods(path: Path = FOODS_YAML) -> dict[str, Food]:
@@ -39,3 +40,16 @@ def save_foods(foods: dict[str, Food], path: Path = FOODS_YAML) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w") as f:
         yaml.safe_dump(foods_to_yaml(foods), f, sort_keys=True)
+
+
+def load_profile(path: Path = PROFILE_YAML) -> dict:
+    if not path.exists():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("{}")
+    return yaml.safe_load(path.read_text()) or {}
+
+
+def save_profile(profile: dict, path: Path = PROFILE_YAML) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w") as f:
+        yaml.safe_dump(profile, f, sort_keys=True)
